@@ -66,8 +66,8 @@ const AdminPage: React.FC = () => {
   const fetchData = async () => {
     try {
       const [moviesResponse, categoriesResponse] = await Promise.all([
-        fetch('https://samchi.onrender.com/api/movies'),
-        fetch('https://samchi.onrender.com/api/categories')
+        fetch('https://samchi.koyeb.app/api/movies'),
+        fetch('https://samchi.koyeb.app/api/categories')
       ]);
 
       if (moviesResponse.ok) {
@@ -118,8 +118,8 @@ const AdminPage: React.FC = () => {
   const handleSaveMovie = async () => {
     try {
       const url = editingMovie 
-        ? `https://samchi.onrender.com/api/movies/${editingMovie._id}`
-        : 'https://samchi.onrender.com/api/movies';
+        ? `https://samchi.koyeb.app/api/movies/${editingMovie._id}`
+        : 'https://samchi.koyeb.app/api/movies';
       
       const method = editingMovie ? 'PUT' : 'POST';
       
@@ -145,7 +145,7 @@ const AdminPage: React.FC = () => {
   const handleDeleteMovie = async (movieId: string) => {
     if (window.confirm('Are you sure you want to delete this movie?')) {
       try {
-        const response = await fetch(`https://samchi.onrender.com/api/movies/${movieId}`, {
+        const response = await fetch(`https://samchi.koyeb.app/api/movies/${movieId}`, {
           method: 'DELETE',
         });
 
@@ -175,8 +175,8 @@ const AdminPage: React.FC = () => {
   const handleSaveCategory = async () => {
     try {
       const url = editingCategory 
-        ? `https://samchi.onrender.com/api/categories/${editingCategory._id}`
-        : 'https://samchi.onrender.com/api/categories';
+        ? `https://samchi.koyeb.app/api/categories/${editingCategory._id}`
+        : 'https://samchi.koyeb.app/api/categories';
       
       const method = editingCategory ? 'PUT' : 'POST';
       
@@ -202,7 +202,7 @@ const AdminPage: React.FC = () => {
   const handleDeleteCategory = async (categoryId: string) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
       try {
-        const response = await fetch(`https://samchi.onrender.com/api/categories/${categoryId}`, {
+        const response = await fetch(`https://samchi.koyeb.app/api/categories/${categoryId}`, {
           method: 'DELETE',
         });
 
