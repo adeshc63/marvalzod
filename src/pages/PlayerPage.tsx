@@ -22,6 +22,10 @@ const PlayerPage: React.FC = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [volume, setVolume] = useState(1); // Volume from 0 to 1
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -77,6 +81,49 @@ const PlayerPage: React.FC = () => {
     }
   };
 
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    if (videoRef.current) {
+      videoRef.current.volume = newVolume;
+      setVolume(newVolume);
+      setIsMuted(newVolume === 0); // Mute if volume is 0
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration);
+    }
+  };
+
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (videoRef.current) {
+      const newTime = (parseFloat(e.target.value) / 100) * duration;
+      videoRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  const handleWaiting = () => {
+    setIsBuffering(true);
+  };
+
+  const handlePlaying = () => {
+    setIsBuffering(false);
+  };
+
   const toggleFullscreen = () => {
     if (videoRef.current) {
       if (document.fullscreenElement) {
@@ -129,30 +176,39 @@ const PlayerPage: React.FC = () => {
           onPause={() => setIsPlaying(false)}
           onMouseMove={() => setShowControls(true)}
           onClick={togglePlayPause}
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onWaiting={handleWaiting}
+          onPlaying={handlePlaying}
         >
           <source src={movie.streamUrl} type="video/mp4" />
           Your browser does not support the video tag.
         </video>
 
+        {/* Loading Indicator */}
+        {isBuffering && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-primary-500 border-t-transparent"></div>
+          </div>
+        )}
+
         {/* Overlay Controls */}
         <div
-          className={`absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/50 transition-opacity duration-300 ${
-            showControls ? 'opacity-100' : 'opacity-0'
-          }`}
+          className={`absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/50 transition-opacity duration-300 ${showControls ? 'opacity-100' : 'opacity-0'}`}
           onMouseMove={() => setShowControls(true)}
         >
           {/* Top Bar */}
-          <div className="absolute top-0 left-0 right-0 p-6 flex items-center justify-between">
+          <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex items-center justify-between">
             <Link
               to="/movies"
-              className="flex items-center space-x-2 text-white hover:text-primary-500 transition-colors"
+              className="flex items-center space-x-2 text-white hover:text-primary-500 transition-colors text-sm md:text-base"
             >
-              <ArrowLeft className="w-6 h-6" />
+              <ArrowLeft className="w-5 h-5 md:w-6 md:h-6" />
               <span className="font-semibold">Back to Movies</span>
             </Link>
-            <div className="text-white">
-              <h1 className="text-2xl font-bold">{movie.title}</h1>
-              <p className="text-gray-300">{movie.year} • Rating: {movie.rating}</p>
+            <div className="text-white text-right">
+              <h1 className="text-lg md:text-2xl font-bold">{movie.title}</h1>
+              <p className="text-gray-300 text-xs md:text-base">{movie.year} • Rating: {movie.rating}</p>
             </div>
           </div>
 
@@ -161,97 +217,82 @@ const PlayerPage: React.FC = () => {
             <div className="absolute inset-0 flex items-center justify-center">
               <button
                 onClick={togglePlayPause}
-                className="bg-primary-500 hover:bg-primary-600 text-black p-6 rounded-full transform hover:scale-110 transition-all duration-200"
+                className="bg-primary-500 hover:bg-primary-600 text-black p-4 md:p-6 rounded-full transform hover:scale-110 transition-all duration-200"
               >
-                <Play className="w-12 h-12" />
+                <Play className="w-8 h-8 md:w-12 md:h-12" />
               </button>
             </div>
           )}
 
           {/* Bottom Controls */}
-          <div className="absolute bottom-0 left-0 right-0 p-6">
-            <div className="flex items-center justify-center space-x-6">
-              {/* Skip Back */}
-              <button
-                onClick={() => skipTime(-10)}
-                className="text-white hover:text-primary-500 transition-colors"
-              >
-                <RotateCcw className="w-8 h-8" />
-              </button>
+          <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6">
+            {/* Progress Bar */}
+            <div className="flex items-center space-x-2 mb-4">
+              <span className="text-white text-sm font-medium">{formatTime(currentTime)}</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={(currentTime / duration) * 100 || 0}
+                onChange={handleProgressChange}
+                className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              />
+              <span className="text-white text-sm font-medium">{formatTime(duration)}</span>
+            </div>
 
-              {/* Play/Pause */}
-              <button
-                onClick={togglePlayPause}
-                className="bg-primary-500 hover:bg-primary-600 text-black p-3 rounded-full transition-all duration-200"
-              >
-                {isPlaying ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8" />}
-              </button>
+            <div className="flex items-center justify-between space-x-4">
+              <div className="flex items-center space-x-2 md:space-x-6">
+                {/* Skip Back */}
+                <button
+                  onClick={() => skipTime(-10)}
+                  className="text-white hover:text-primary-500 transition-colors p-2 rounded-full hover:bg-white/10"
+                >
+                  <RotateCcw className="w-6 h-6 md:w-8 md:h-8" />
+                </button>
 
-              {/* Skip Forward */}
-              <button
-                onClick={() => skipTime(10)}
-                className="text-white hover:text-primary-500 transition-colors"
-              >
-                <RotateCw className="w-8 h-8" />
-              </button>
+                {/* Play/Pause */}
+                <button
+                  onClick={togglePlayPause}
+                  className="bg-primary-500 hover:bg-primary-600 text-black p-2 md:p-3 rounded-full transition-all duration-200"
+                >
+                  {isPlaying ? <Pause className="w-6 h-6 md:w-8 md:h-8" /> : <Play className="w-6 h-6 md:w-8 md:h-8" />}
+                </button>
 
-              {/* Mute */}
-              <button
-                onClick={toggleMute}
-                className="text-white hover:text-primary-500 transition-colors"
-              >
-                {isMuted ? <VolumeX className="w-8 h-8" /> : <Volume2 className="w-8 h-8" />}
-              </button>
+                {/* Skip Forward */}
+                <button
+                  onClick={() => skipTime(10)}
+                  className="text-white hover:text-primary-500 transition-colors p-2 rounded-full hover:bg-white/10"
+                >
+                  <RotateCw className="w-6 h-6 md:w-8 md:h-8" />
+                </button>
+
+                {/* Volume Control */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={toggleMute}
+                    className="text-white hover:text-primary-500 transition-colors p-2 rounded-full hover:bg-white/10"
+                  >
+                    {isMuted || volume === 0 ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+                  </button>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={isMuted ? 0 : volume}
+                    onChange={handleVolumeChange}
+                    className="w-24 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                  />
+                </div>
+              </div>
 
               {/* Fullscreen */}
               <button
                 onClick={toggleFullscreen}
-                className="text-white hover:text-primary-500 transition-colors"
+                className="text-white hover:text-primary-500 transition-colors p-2 rounded-full hover:bg-white/10"
               >
-                <Maximize className="w-8 h-8" />
+                <Maximize className="w-6 h-6 md:w-8 md:h-8" />
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Movie Info Section */}
-      <div className="bg-white p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid md:grid-cols-2 gap-8 items-center">
-            <div>
-              <h2 className="text-4xl font-black text-black mb-4">{movie.title}</h2>
-              <div className="flex items-center space-x-4 mb-6">
-                <span className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full font-medium">
-                  {movie.year}
-                </span>
-                <span className="bg-yellow-400 text-black px-3 py-1 rounded-full font-medium">
-                  ★ {movie.rating}
-                </span>
-                {movie.category && (
-                  <span className="bg-primary-500 text-black px-3 py-1 rounded-full font-medium">
-                    {movie.category.name}
-                  </span>
-                )}
-              </div>
-              <p className="text-gray-600 text-lg leading-relaxed mb-6">
-                Experience this amazing movie in high quality. Stream now and enjoy the cinematic experience 
-                from the comfort of your home.
-              </p>
-              <Link to="/movies" className="btn-outline">
-                Browse More Movies
-              </Link>
-            </div>
-            <div className="neo-card p-6">
-              <img
-                src={movie.thumbnailUrl}
-                alt={movie.title}
-                className="w-full rounded-lg"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'https://images.pexels.com/photos/489319/pexels-photo-489319.jpeg?auto=compress&cs=tinysrgb&w=600';
-                }}
-              />
             </div>
           </div>
         </div>
